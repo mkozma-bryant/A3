@@ -1,0 +1,209 @@
+---
+title: "Assignment 3"
+author: "McKenzie Kozma"
+date: "9/18/2019"
+output: 
+#rmarkdown::github_document
+  pdf_document: default
+  #html_document: default
+---
+```{r}
+library(tidyverse)
+data <- read.csv("titanic.csv")
+```
+
+
+REDO OF ASSIGNMENT 1 #13 - 23 (i used dplyr in A1 so the following will be done in base r)
+
+13. Calculate the mean age of female passengers
+
+```{r}
+mean(data$Age[data$Sex == "female"], na.rm = TRUE)
+```
+
+14. Calculate the median fare of the passengers in Class 1
+
+```{r}
+median(data$Fare[data$Pclass == 1], na.rm = TRUE)
+```
+
+15. Calculate the median fare of the female passengers that are not in Class 1
+
+```{r}
+median(data$Fare[data$Sex == 'female' & data$Pclass != 1], na.rm = TRUE)
+```
+
+16. Calculate the median age of survived passengers who are female and Class 1 or Class 2
+
+```{r}
+median(data$Age[data$Survived == 1 & data$Sex == 'female' & data$Pclass %in% c(1,2)], na.rm = TRUE)
+```
+
+17. Calculate the mean fare of female teenagers survived passengers
+
+```{r}
+mean(data$Fare[data$Sex == 'female' & data$Survived == 1 & data$Age < 20 & data$Age > 12], na.rm = TRUE)
+```
+
+18. Calculate the mean fare of female teenagers survived passengers for each class
+
+```{r}
+by(data$Fare[data$Sex == 'female' & data$Survived == 1 & data$Age > 12 & data$Age < 20], 
+   data$Pclass[data$Sex == 'female' & data$Survived == 1 & data$Age > 12 & data$Age < 20], FUN = mean)
+```
+
+19. Calculate the ratio of Survived and not Survived for passengers who are who pays more than the average fare
+
+```{r}
+nobs <- nrow(data[data$Fare > mean(data$Fare),])
+survive <- sum(data$Survived[data$Fare > mean(data$Fare)])
+
+survive/(nobs - survive)
+```
+
+20. Add column that standardizes the fare (subtract the mean and divide by standard deviation) and name it sfare
+
+```{r}
+sfare = (data$Fare - mean(data$Fare)) / sd(data$Fare)
+data2 <- cbind(data, sfare)
+```
+
+21. Add categorical variable named cfare that takes value cheap for passengers paying less the average fare and takes value expensive for passengers paying more than the average fare.
+
+```{r}
+cfare = ifelse(data2$Fare < mean(data2$Fare), "cheap", "expensive")
+data3 <- cbind(data, cfare)
+```
+
+22. Add categorical variable named cage that takes value 0 for age 0-10, 1 for age 10-20, 2 for age 20-30, and so on
+
+```{r}
+cage = trunc(data3$Age / 10) * 10
+data4 <- cbind(data3, cage)
+```
+
+23. Show the frequency of Ports of Embarkation. It appears that there are two missing values in the Embarked variable. Assign the most frequent port to the missing ports. Hint: Use the levels function to modify the categories of categorical variables.
+
+```{r}
+summary(data$Embarked)
+levels(data$Embarked) <- c("S", "C", "Q", "S")
+```
+
+
+
+
+REDO OF ASSIGNMENT 2 #4, 5, 11, 12, AND 13 
+
+```{r}
+library(readxl)
+c2015 <- read_xlsx("c2015.xlsx")
+
+dim(c2015)
+set.seed(2019)
+samp <- sample_n(c2015, 1000)
+glimpse(samp)
+
+samp$YEAR <- NULL
+samp$TRAV_SP <- as.numeric(str_remove(samp$TRAV_SP, "MPH"))
+
+samp %>% 
+  group_by(INJ_SEV == "No Apparent Injury (O)") %>%
+  summarise(speed = mean(TRAV_SP, na.rm = TRUE))
+
+samp2 <- samp %>% 
+  filter(SEAT_POS != "Front Seat, Left Side")
+  
+samp2 %>% 
+  group_by(SEX) %>% 
+  summarise(speed = mean(TRAV_SP, na.rm = TRUE))
+
+samp2 %>% 
+  group_by(DRINKING) %>% 
+  summarise(speed = mean(TRAV_SP, na.rm = TRUE))
+```
+
+3. Calculate the travel speed (TRAV_SP variable) by day. Compare the travel speed of the first 5 days and
+the last 5 days of months.
+
+```{r}
+
+samp2 %>% filter(DAY %in% c(1:5, 26:30)) %>% 
+  group_by(DAY %in% c(1:5)) %>% 
+  summarise(speed = mean(TRAV_SP, na.rm = TRUE))
+
+#drive faster at the end of the month
+```
+
+4. Calculate the travel speed (TRAV_SP variable) by day of the week. Compare the travel speed of the
+weekdays and weekends.
+
+```{r}
+samp2 %>% group_by(DAY_WEEK %in% c("Sunday", "Saturday")) %>% 
+  summarise(speed = mean(TRAV_SP, na.rm = TRUE))
+
+#faster on weekends
+```
+
+5. Find the top 5 states with greatest travel speed.
+
+```{r}
+samp2 %>% group_by(STATE) %>% 
+  summarise(SPEED = mean(TRAV_SP, na.rm = TRUE)) %>% 
+  top_n(5, SPEED)
+```
+
+6. Rank the travel speed by MONTH.
+
+```{r}
+samp2 %>% group_by(MONTH) %>% 
+  summarise(SPEED = mean(TRAV_SP, na.rm = TRUE)) %>% 
+  arrange(-SPEED)
+```
+
+7. Find the average speed of teenagers in December.
+
+```{r}
+samp2 %>% filter(MONTH == "December" & AGE %in% c(13:19)) %>% 
+  summarise(SPEED = mean(TRAV_SP, na.rm = TRUE))
+```
+
+8. Find the month that female drivers drive fastest on average.
+
+```{r}
+samp2 %>% filter(SEX == "Female") %>% 
+  group_by(MONTH) %>% 
+  summarise(SPEED = mean(TRAV_SP, na.rm = TRUE)) %>% 
+  top_n(1, SPEED)
+```
+
+9. Find the month that male driver drive slowest on average.
+
+```{r}
+samp2 %>% filter(SEX == "Male") %>% 
+  group_by(MONTH) %>% 
+  summarise(SPEED = mean(TRAV_SP, na.rm = TRUE)) %>% 
+  top_n(-1, SPEED)
+```
+
+10. Create a new column containing information about the season of the accidents. Compare the percentage
+of Fatal Injury by seasons.
+
+```{r}
+samp2 %>% 
+  mutate(SEASON = ifelse(MONTH %in% c("December", "January", "February"), "Winter",
+                         ifelse(MONTH %in% c("March", "April", "May"), "Spring",
+                                ifelse(MONTH %in% c("June", "July", "August"), "Summer",
+                                       ifelse(MONTH %in% c("September", "October", "November"), "Fall", ""))))) %>% 
+  group_by(SEASON) %>% 
+  summarise(prop_fatal = (sum(INJ_SEV == "Fatal Injury (K)"))/n())
+  
+```
+
+11. Compare the percentage of fatal injuries for different type of deformations (DEFORMED variable)
+
+```{r}
+samp2 %>% group_by(DEFORMED) %>% 
+  summarise(prop_fatal = (sum(INJ_SEV == "Fatal Injury (K)"))/n()) %>% 
+  arrange(-prop_fatal)
+```
+
